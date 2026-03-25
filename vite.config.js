@@ -7,9 +7,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api/v1/users': {
-        target: import.meta.env.VITE_BACKEND_SERVER_URL,
-        changeOrigin: true,
-        secure: true
+        target: 'https://backend-esbd.onrender.com',
+        changeOrigin:true,
+        secure:true
       }
     },
   },
