@@ -1,12 +1,13 @@
 import axios from "axios";
 
 const serverUrl = import.meta.env.VITE_BACKEND_SERVER_URL;
+// console.log(serverUrl);
 
 
 const getAllVideos = async (pageNum) => {
     try {
         const response = await axios.get(
-            `/api/v1/users/get-all-files?page=${pageNum}&limit=3`,
+            `${serverUrl}/api/v1/users/get-all-files?page=${pageNum}&limit=3`,
             { withCredentials: true },
 
         )
