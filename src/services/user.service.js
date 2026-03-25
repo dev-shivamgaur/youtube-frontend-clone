@@ -140,7 +140,7 @@ const forgotPassword = async (email) => {
     }
     try {
 
-        const res = await axios.post(`api/v1/users/forgot-password`,
+        const res = await axios.post(`${serverUrl}/api/v1/users/forgot-password`,
             {
                 email
             }
@@ -177,7 +177,7 @@ const updatePassword = async (email, password) => {
     }
 
     try {
-        const res = await axios.patch("${serverUrl}/api/v1/users/update-password",
+        const res = await axios.patch(`${serverUrl}/api/v1/users/update-passwor`,
             {
                 email, password
             },
@@ -195,7 +195,7 @@ const updatePassword = async (email, password) => {
 const generateNewAccessToken = async () => {
    
     try {
-        const res = await axios.post(`api/v1/users/refresh-access-token`,
+        const res = await axios.post(`${serverUrl}/api/v1/users/refresh-access-token`,
             {},
             {
                 withCredentials: true,
