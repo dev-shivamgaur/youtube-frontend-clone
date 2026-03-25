@@ -1,0 +1,734 @@
+import React, { useEffect, useRef, useState } from "react";
+import { useSearchParams, useLocation, useNavigate, Link } from "react-router-dom";
+import Hls from "hls.js";
+import { getSpecificVideo } from "../../services/video.service";
+import { Loader, ProfilePopup } from "../index";
+import { timingFormat } from "./homeLongVideoCard";
+import { FaPlay, FaPause } from "react-icons/fa";
+import { HiSpeakerWave, HiSpeakerXMark } from "react-icons/hi2";
+import { RedirectPopup } from "../index"
+import { useSelector, useDispatch } from "react-redux";
+import LikeAndDislike from "./VideoComponents/LikeAndDislike";
+import { toggleUserReaction, userVideoReactionStatus } from "../../services/like.service";
+import Comment from "./VideoComponents/Comment";
+import { getAllCommentsSpecificVideo } from "../../services/comment.service";
+import socket from "../../Socket";
+import { generateNewAccessToken } from "../../services/user.service";
+import { logout } from "../../store/auth.slice";
+import { subscribedStatus } from "../../services/subscribed.service";
+import { getUserChannelSubscribed, toggleSubscriber } from "../../services/subscribed.service";
+
+
+const REDIRECT_DELAY = 6;
+function MainLongVideoCard() {
+  const [params] = useSearchParams();
+  let videoId = params.get("v");
+  let signal;
+
+  if (videoId) {
+    signal = "randomVideo";
+  }
+
+  if (!videoId) {
+    videoId = params.get("notification");
+    signal = "notificationVideo";
+  }
+  
+  const videoRef = useRef(null);
+  const progressRef = useRef(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const user = useSelector((state) => state.auth.userData);
+
+  const [videoInfo, setVideoInfo] = useState({});
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [showControls, setShowControls] = useState(false);
+  const [commentInfo, setCommentInfo] = useState([]);
+  const [progress, setProgress] = useState(0);
+  const [buffered, setBuffered] = useState(0);
+  const [currTime, setCurrTime] = useState("00:00");
+  const [open, setOpen] = useState(false);
+  const [like, setLike] = useState(false);
+  const [dislike, setDisLike] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [userReaction, setUserReaction] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(REDIRECT_DELAY);
+  const [replyedCommentInfo, setReplyedCommentInfo] = useState([]);
+  const [subscribedAction, setSubscribedAction] = useState(false);
+  const [subscriberdetails, setSubscriberdetails] = useState([]);
+  const [subscriberCount, setSubscriberCount] = useState(null);
+  /* ================= 1 VIDEO FETCH ================= */
+  useEffect(() => {
+    if (!videoId) return;
+
+    const fetchVideo = async () => {
+      try {
+        let res = await getSpecificVideo(videoId, signal);
+        if (res?.response?.data?.data === "Unauthorized request, Token created") {
+          const res2= await generateNewAccessToken();
+          if (res2?.response?.data?.data === "Refresh Token can not provide please login") {
+            alert("Your refresh Token expiry, please Login and useSpecific services");
+            dispatch(logout());
+            navigate("/login")
+            return;
+          }
+           if (res2?.data?.message === "Access Token is created SuccessFully") {
+            const res3 = await getSpecificVideo(videoId);
+            res = res3;
+            return;
+           }
+        }
+       console.log(res);
+        setVideoInfo(res);
+        // setCommentInfo(res.commentInfo);
+      } catch (error) {
+        if (error.response.status === 401) {
+          videoRef.current.pause()
+          setShowPopup(true);
+
+          sessionStorage.setItem(
+            "postLoginRedirect",
+            location.pathname + location.search
+          );
+        }
+      }
+
+    };
+
+    fetchVideo();
+  }, [videoId]);
+
+  /*==============VideoLikes set to the LocalState===========*/
+  useEffect(() => {
+
+    if (videoInfo?.likes !== undefined) {
+      setLikesCount(videoInfo?.likes);
+    }
+  }, [videoInfo?.likes]);
+
+
+  /* ================= 2 HLS STREAM ATTACH ================= */
+  useEffect(() => {
+    if (!videoInfo?.videoFile || !videoRef.current) return;
+
+    const video = videoRef.current;
+    const hlsUrl = videoInfo.videoFile;
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({ lowLatencyMode: true });
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(video);
+
+      return () => hls.destroy();
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = hlsUrl;
+    }
+  }, [videoInfo]);
+
+  /* ================= 3 BUFFERING & PROGRESS ================= */
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const onWaiting = () => setIsBuffering(true);
+    const onPlaying = () => setIsBuffering(false);
+
+    const onProgress = () => {
+      if (video.buffered.length) {
+        const end = video.buffered.end(video.buffered.length - 1);
+        setBuffered((end / video.duration) * 100);
+      }
+    };
+
+    video.addEventListener("waiting", onWaiting);
+    video.addEventListener("playing", onPlaying);
+    video.addEventListener("progress", onProgress);
+
+    return () => {
+      video.removeEventListener("waiting", onWaiting);
+      video.removeEventListener("playing", onPlaying);
+      video.removeEventListener("progress", onProgress);
+    };
+  }, []);
+
+  /* ================= 4 POPUP COUNTDOWN ================= */
+  useEffect(() => {
+    if (!showPopup) return;
+
+    const interval = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          navigate("/login");
+          return 0;
+        }
+        return prev - 1;
+
+      })
+
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [showPopup, navigate]);
+
+  //================FetchUserReactions================//
+  useEffect(() => {
+    if (!videoId) return;
+    try {
+      const fetchUserReaction = async () => {
+        let res = await userVideoReactionStatus(videoId);
+      if (res?.response?.data?.data === "Unauthorized request, Token created") {
+          const res2= await generateNewAccessToken();
+          if (res2?.response?.data?.data === "Refresh Token can not provide please login") {
+            alert("Your refresh Token expiry, please Login and useSpecific services");
+            dispatch(logout());
+            navigate("/login")
+            return;
+          }
+           if (res2?.data?.message === "Access Token is created SuccessFully") {
+            const res3 = await userVideoReactionStatus(videoId);
+            res = res3;
+            return;
+           }
+        }
+        setUserReaction(res);
+
+      }
+      fetchUserReaction();
+    } catch (error) {
+      console.log(error)
+    }
+  }, [videoId]);
+
+  useEffect(() => {
+    if (userReaction === "like") {
+      setLike(true);
+    }
+
+    if (userReaction === "dislike") {
+      setDisLike(true);
+    }
+
+    if (userReaction === null) {
+      setLike(false);
+      setDisLike(false);
+    }
+
+  }, [userReaction]);
+
+  //=============Get all comments for specific video========//
+  useEffect(() => {
+    if (!videoId) return;
+
+    const fetchData = async () => {
+      try {
+        console.log(videoId)
+        const res = await getAllCommentsSpecificVideo(videoId);
+        if (res?.response?.data?.data === "Unauthorized request, Token created") {
+          const res2= await generateNewAccessToken();
+          if (res2?.response?.data?.data === "Refresh Token can not provide please login") {
+            alert("Your refresh Token expiry, please Login and useSpecific services");
+            dispatch(logout());
+            navigate("/login")
+            return;
+          }
+           if (res2?.data?.message === "Access Token is created SuccessFully") {
+            const res3 = await getAllCommentsSpecificVideo(videoId);
+            const notReplyedComment = res3.filter((comment) => comment.parentComment === null);
+        const ReplyedComment = res3.filter((comment) => comment.parentComment !== null);
+        console.log("NotreplyComment", notReplyedComment);
+        console.log("replyedComment", ReplyedComment);
+        setCommentInfo(notReplyedComment);
+        setReplyedCommentInfo(ReplyedComment);
+            return;
+           }
+        }
+        
+        const notReplyedComment = res.filter((comment) => comment.parentComment === null);
+        const ReplyedComment = res.filter((comment) => comment.parentComment !== null);
+        console.log("NotreplyComment", notReplyedComment);
+        console.log("replyedComment", ReplyedComment);
+        setCommentInfo(notReplyedComment);
+        setReplyedCommentInfo(ReplyedComment);
+
+        // setCommentInfo(res);
+      } catch (error) {
+        console.lof(error);
+      }
+    }
+    fetchData();
+
+  }, [videoId]);
+
+  //===========Socket Connection===========//   
+  useEffect(() => {
+    if (!videoId) {
+      return;
+    }
+    socket.emit("join-video", videoId);
+    socket.on("newComment", (comment) => {
+      if (comment.video == videoId && comment.parentComment == null) {
+
+        setCommentInfo((prev) => [comment, ...prev])
+      }
+
+      if (comment.video == videoId && comment.parentComment != null) {
+
+        setReplyedCommentInfo((prev) => [comment, ...prev]);
+      }
+
+    });
+    return () => socket.off("newComment")
+
+  }, [videoId]);
+
+  //===========Subscribed Status ===========//
+
+  useEffect(() => {
+    const fetchUserSubscribedStatus = async() => {
+      const channelId = videoInfo?.owner?._id;
+      if (!channelId) {
+        console.log("ChannelId is required");
+        return;
+      }
+      console.log("Status",channelId);
+      let res = await subscribedStatus(channelId);
+        if (res?.response?.data?.data === "Unauthorized request, Token created") {
+          const res2= await generateNewAccessToken();
+          if (res2?.response?.data?.data === "Refresh Token can not provide please login") {
+            alert("Your refresh Token expiry, please Login and useSpecific services");
+            dispatch(logout());
+            navigate("/login")
+            return;
+          }
+           if (res2?.data?.message === "Access Token is created SuccessFully") {
+              const res3 =await subscribedStatus(channelId);
+              res = res3;
+            return;
+           }
+        }
+
+        if (res?.data?.data?.subscribed === true) {
+          setSubscribedAction(true);
+          return;
+        }
+
+        if (res?.data?.data?.subscribed === false) {
+          setSubscribedAction(false);
+          return;
+        }
+    }
+    fetchUserSubscribedStatus();
+
+ 
+  }, [videoInfo?.owner?._id]);
+
+  useEffect(() => {
+    const getUserSubscribers = async() => {
+      const channelId = videoInfo?.owner?._id;
+      if (!channelId) {
+        console.log("channelId is required");
+        return;
+      }
+
+      let res = await getUserChannelSubscribed(channelId);
+      if (res?.response?.data?.data === "Unauthorized request, Token created") {
+          const res2= await generateNewAccessToken();
+          if (res2?.response?.data?.data === "Refresh Token can not provide please login") {
+            alert("Your refresh Token expiry, please Login and useSpecific services");
+            dispatch(logout());
+            navigate("/login")
+            return;
+          }
+           if (res2?.data?.message === "Access Token is created SuccessFully") {
+              const res3 = await getUserChannelSubscribed(channelId);
+              res = res3;
+            return;
+           }
+        }
+        if (res?.data?.statusCode === 200) {
+          const totalSubscriber = res.data.data.length || 0;
+          setSubscriberCount(totalSubscriber);
+          setSubscriberdetails(res?.data?.data);
+          return;
+        }
+    }
+    getUserSubscribers();
+  }, [videoInfo?.owner?._id]);
+
+  /* ================= 5 PLAY / PAUSE ================= */
+  const togglePlay = () => {
+    if (!user) {
+      videoRef.current.pause();
+      setShowPopup(true);
+
+      sessionStorage.setItem(
+        "postLoginRedirect",
+        location.pathname + location.search
+      );
+      return;
+    }
+    if (!isPlaying) videoRef.current.play();
+    else videoRef.current.pause();
+
+    setIsPlaying(!isPlaying);
+  };
+  /* ================= 6 OTHER FUNCTIONS ================= */
+  // Popup close
+  const handleClose = () => {
+    sessionStorage.removeItem("postLoginRedirect");
+    navigate(-1);
+  }
+
+  // Login button
+  const handleLogin = () => {
+    navigate("/login");
+  }
+
+  // Mute/Unmute
+  const toggleVolume = () => {
+    const muted = !videoRef.current.muted;
+    videoRef.current.muted = muted;
+    setIsMuted(muted);
+  };
+
+  // Time update
+  const handleTimeUpdate = () => {
+    const video = videoRef.current;
+    setCurrTime(timingFormat(video.currentTime));
+    setProgress((video.currentTime / video.duration) * 100);
+  };
+
+  // Seek bar
+  const handleSeek = (e) => {
+    const rect = progressRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percent = clickX / rect.width;
+    videoRef.current.currentTime = percent * videoInfo.duration;
+  };
+
+  // Total duration
+  const totalTime = timingFormat(videoInfo?.duration || 0);
+
+  const toggleLike = async () => {
+    const reaction = "like";
+    if (like) {
+      setLikesCount(prev => Math.max(prev - 1, 0));
+      setLike(false);
+
+    } else {
+      if (dislike) {
+        setDisLike(false);
+      }
+      setLikesCount(prev => prev + 1);
+      setLike(true);
+    }
+
+    try {
+      const res = await toggleUserReaction(videoId, reaction)
+       if (res?.response?.data?.data === "Unauthorized request, Token created") {
+          const res2= await generateNewAccessToken();
+          if (res2?.response?.data?.data === "Refresh Token can not provide please login") {
+            alert("Your refresh Token expiry, please Login and useSpecific services");
+            dispatch(logout());
+            navigate("/login")
+            return;
+          }
+           if (res2?.data?.message === "Access Token is created SuccessFully") {
+             await toggleUserReaction(videoId, reaction);
+            
+            return;
+           }
+        }
+    } catch (error) {
+      console.log(error)
+    }
+
+  };
+
+  const toggleDislike = async () => {
+    const reaction = "dislike";
+
+    if (dislike) {
+      setDisLike(false)
+      try {
+        const res = await toggleUserReaction(videoId, reaction);
+      } catch (error) {
+        console.log(error);
+      }
+      return;
+    }
+
+    if (like) {
+      setLike(false);
+      setLikesCount(prev => Math.max(prev - 1, 0));
+    }
+
+    setDisLike(true);
+
+    try {
+      const res = await toggleUserReaction(videoId, reaction)
+       if (res?.response?.data?.data === "Unauthorized request, Token created") {
+          const res2= await generateNewAccessToken();
+          if (res2?.response?.data?.data === "Refresh Token can not provide please login") {
+            alert("Your refresh Token expiry, please Login and useSpecific services");
+            dispatch(logout());
+            navigate("/login")
+            return;
+          }
+           if (res2?.data?.message === "Access Token is created SuccessFully") {
+             await toggleUserReaction(videoId, reaction);
+            
+            return;
+           }
+        }
+    } catch (error) {
+      console.log(error)
+    }
+
+  };
+
+  const handletoggleSubsribed = async() => {
+    
+    if (subscribedAction) {
+      setSubscribedAction(false);
+      setSubscriberCount((prev) => {
+        if (prev ===0) {
+          return;
+        }
+        return prev-1;
+      })
+    } else {
+      setSubscribedAction(true);
+      setSubscriberCount((prev) => {
+        return prev+1;
+      })
+    }
+
+    if (!videoInfo?.owner?._id) {
+      console.log("Video owner is required");
+      return;
+    }
+    const channelId = videoInfo?.owner?._id;
+
+
+    let res = await toggleSubscriber(channelId);
+    if (res?.response?.data?.data === "Unauthorized request, Token created") {
+          const res2= await generateNewAccessToken();
+          if (res2?.response?.data?.data === "Refresh Token can not provide please login") {
+            alert("Your refresh Token expiry, please Login and useSpecific services");
+            dispatch(logout());
+            navigate("/login")
+            return;
+          }
+           if (res2?.data?.message === "Access Token is created SuccessFully") {
+              const res3 = await toggleSubscriber(channelId);
+              res = res3;
+            return;
+           }
+        }
+        console.log(res);
+
+        if (res?.data?.message === "Subscribed Successfully") {
+          // setSubscribedAction(true);
+          return;
+        }
+
+        if (res?.data?.message === "Unsubscribed Successfully") {
+          // setSubscribedAction(false);
+          return;
+        }
+
+  }
+
+  return (
+    <div>
+      {
+        showPopup ? (<RedirectPopup
+          open={showPopup}
+          onBack={handleClose}
+          onLogin={handleLogin}
+          secondsLefts={secondsLeft}
+        />) : (<div className="w-full bg-black text-white">
+
+          {/* ================= VIDEO PLAYER ================= */}
+          <div
+            className="relative w-full h-[220px] sm:h-[400px] md:h-[520px] lg:h-[600px]"
+            onMouseEnter={() => setShowControls(true)}
+            onMouseLeave={() => setShowControls(false)}
+          >
+            <div>
+
+            </div>
+            <video
+              ref={videoRef}
+              poster={videoInfo?.thumbnail}
+              onTimeUpdate={handleTimeUpdate}
+              className="w-full h-full object-contain"
+              onClick={togglePlay}
+            />
+
+            {isBuffering && (
+              <div className="absolute inset-0 flex items-center justify-center z-50">
+                <Loader />
+              </div>
+            )}
+
+            {showControls && (
+              <div
+                ref={progressRef}
+                onClick={handleSeek}
+                className="absolute bottom-12 left-0 w-full h-1 bg-gray-600 cursor-pointer"
+              >
+                <div
+                  className="h-full bg-gray-400"
+                  style={{ width: `${buffered}%` }}
+                />
+                <div
+                  className="absolute top-0 h-full bg-red-600"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            )}
+
+            {showControls && (
+              <div className="absolute bottom-0 left-0 w-full px-3 sm:px-4 py-2 flex justify-between items-center bg-gradient-to-t from-black/90 to-transparent">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <button onClick={togglePlay}>
+                    {isPlaying ? <FaPause size={18} /> : <FaPlay size={16} />}
+                  </button>
+
+                  <button onClick={toggleVolume}>
+                    {isMuted ? <HiSpeakerXMark size={20} /> : <HiSpeakerWave size={20} />}
+                  </button>
+
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    onChange={(e) => (videoRef.current.volume = e.target.value)}
+                    className="hidden sm:block w-24 accent-red-600"
+                  />
+
+                  <span className="text-xs sm:text-sm text-gray-300">
+                    {currTime} / {totalTime}
+                  </span>
+                </div>
+
+                <div className="flex gap-3">
+                  <button>⚙️</button>
+                  <button>⛶</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ================= VIDEO INFO ================= */}
+          <div className="w-full mx-auto  px-3 sm:px-4 py-4">
+
+            <h1 className="text-base sm:text-lg md:text-xl font-semibold">
+              {videoInfo.title}
+            </h1>
+
+            <p className="text-xs sm:text-sm text-gray-400 mt-1">
+              {videoInfo.views} views • {videoInfo.createdAt}
+            </p>
+
+            {/* ACTION BAR */}
+            {
+              videoInfo?.owner && (
+                <div className="flex flex-wrap justify-between items-center gap-4 mt-4">
+
+                  {/* CHANNEL */}
+                  <div className="flex items-center gap-3">
+                    <Link
+                    to = {`/${videoInfo.owner.username}`}
+                    >
+                    <div className="w-10 h-10 rounded-full bg-gray-600" >
+                      {
+                        videoInfo?.owner.avatar && (
+                          <img
+                            src={`${videoInfo.owner.avatar}`}
+                            className="object-cover overflow-hidden w-full h-full rounded-full "
+                          />
+                        )
+                      }
+                    </div>
+                    </Link>
+                    <div className="flex flex-col items-center justify-center">
+                      <Link
+                      to = {`/${videoInfo.owner.username}`}
+                      >
+                      <p className="text-sm font-medium">{videoInfo?.owner?.username}</p>
+                      </Link>
+                      <button className=" text-gray-400"
+                      
+                      >
+                        {subscriberCount} subscribers
+                      </button>
+
+                    </div>
+                    <button className={`ml-3 px-4 py-1 rounded-full text-sm
+                    ${subscribedAction? "bg-red-600": "bg-transparent"}
+                    `}
+                    onClick={handletoggleSubsribed}
+                    
+                    >
+                      Subscribe
+                    </button>
+                  </div>
+
+                  {/* LIKE / DISLIKE */}
+
+                  <div className="flex gap-2">
+                    <LikeAndDislike
+                      like={like}
+                      dislike={dislike}
+                      videoInfo={videoInfo}
+                      toggleLike={toggleLike}
+                      toggleDislike={toggleDislike}
+                      likeCount={likesCount}
+                    />
+                    <button className="bg-[#272727] px-4 py-2 rounded-full text-sm">
+                      Share
+                    </button>
+                  </div>
+
+                </div>
+              )
+            }
+
+
+            {/* DESCRIPTION */}
+            <div className="mt-4 bg-[#272727] rounded-xl p-4 text-sm text-gray-300">
+              {videoInfo.description}
+            </div>
+
+            {/* ================= COMMENTS ================= */}
+            <div className="mt-6">
+              <Comment
+                setOpen={setOpen}
+                open={open}
+                user={user}
+                videoInfo={videoInfo}
+                commentInfo={commentInfo}
+                setCommentInfo={setCommentInfo}
+                replyedCommentInfo={replyedCommentInfo}
+                setReplyedCommentInfo={setReplyedCommentInfo}
+              />
+            </div>
+
+          </div>
+        </div>)
+
+      }
+    </div>
+  );
+}
+
+export default MainLongVideoCard;
