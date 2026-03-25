@@ -1,10 +1,12 @@
 import axios from "axios"
 
+const serverUrl = import.meta.env.VITE_BACKEND_SERVER_URL;
+
 const toggleUserReaction = async (videoId, userReaction) => {
 
     try {
         const res = await axios.post(
-            `/api/v1/users/v/toggle-like/${videoId}`,
+            `${serverUrl}/api/v1/users/v/toggle-like/${videoId}`,
             {
                 userReaction,
                 withCredentials: true,
@@ -22,7 +24,7 @@ const toggleUserReactionForComment = async (commentId,videoId, userReaction) => 
     if (!commentId) return;
 
     try {
-        const res = await axios.post(`/api/v1/users/c/toggle-like/${commentId}`, {
+        const res = await axios.post(`${serverUrl}/api/v1/users/c/toggle-like/${commentId}`, {
             userReaction,videoId,
             withCredentials: true,
 
@@ -41,7 +43,7 @@ const toggleUserReactionForComment = async (commentId,videoId, userReaction) => 
 const userVideoReactionStatus = async (videoId) => {
 
     try {
-        const res = await axios.get(`/api/v1/users/v/get-status/${videoId}`,
+        const res = await axios.get(`${serverUrl}/api/v1/users/v/get-status/${videoId}`,
             {
                 withCredentials: true,
             }
@@ -56,7 +58,7 @@ const userVideoReactionStatus = async (videoId) => {
 
 const userCommentReactionStatus = async(videoId) => {
     try {
-        const res = await axios.get(`/api/v1/users/c/get-status/${videoId}`,{
+        const res = await axios.get(`${serverUrl}/api/v1/users/c/get-status/${videoId}`,{
             withCredentials:true,
         })
         return res.data.data;

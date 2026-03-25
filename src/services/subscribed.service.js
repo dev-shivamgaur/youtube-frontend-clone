@@ -1,4 +1,5 @@
 import axios from "axios"
+const serverUrl = import.meta.env.VITE_BACKEND_SERVER_URL;
 
 const getUserChannelSubscribed = async(channelId) => {
 
@@ -9,7 +10,7 @@ const getUserChannelSubscribed = async(channelId) => {
 
     try {
         
-        const res = await axios.get(`/api/v1/users/get-subscriber/${channelId}`,
+        const res = await axios.get(`${serverUrl}/api/v1/users/get-subscriber/${channelId}`,
             {
                 withCredentials: true,
             },
@@ -32,7 +33,7 @@ const getSubsribedChannel = async(subscriberId) => {
 
     try {
         
-        const res = await axios.get(`/api/v1/users/get-subscribed/${subscriberId}`,
+        const res = await axios.get(`${serverUrl}/api/v1/users/get-subscribed/${subscriberId}`,
             {
                 withCredentials: true,
             }
@@ -53,7 +54,7 @@ const toggleSubscriber = async(channelId) => {
     }
     try {
         
-        const res = await axios.post(`/api/v1/users/toggle-subscriber/${channelId}`,
+        const res = await axios.post(`${serverUrl}/api/v1/users/toggle-subscriber/${channelId}`,
             {},
             {
                 withCredentials: true,
@@ -77,7 +78,7 @@ const subscribedStatus = async(channelId) => {
 
     try {
       
-        const res = await axios.get(`/api/v1/users/get-subscribed-status/${channelId}`,
+        const res = await axios.get(`${serverUrl}/api/v1/users/get-subscribed-status/${channelId}`,
             {
                 withCredentials: true
             },

@@ -1,9 +1,6 @@
 import axios from "axios";
 
 const serverUrl = import.meta.env.VITE_BACKEND_SERVER_URL;
-// console.log(serverUrl);
-
-
 
 const getAllVideos = async (pageNum) => {
     try {
@@ -25,7 +22,7 @@ const uploadVideo = async (title, description, videoFile, thumbnail, category, i
     
     try {
         const response = await axios.post(
-            `/api/v1/users/upload-file`,
+            `${serverUrl}/api/v1/users/upload-file`,
 
             {
                 title, description, videoFile, thumbnail, category, isPublished
@@ -51,7 +48,7 @@ const uploadVideo = async (title, description, videoFile, thumbnail, category, i
 const getSpecificVideo = async (videoId, signal) => {
     try {
         const res = await axios.get(`
-            /api/v1/users/get-specific-video/${videoId}?signal=${signal}`,
+            ${serverUrl}/api/v1/users/get-specific-video/${videoId}?signal=${signal}`,
             { withCredentials: true },
         )
         return res.data.data[0];
@@ -67,7 +64,7 @@ const getVideoBySubscribedChannel = async (channelId) => {
         return;
     }
     try {
-        const res = await axios.get(`/api/v1/users/get-subscribed-channel-video/${channelId}`,
+        const res = await axios.get(`${serverUrl}/api/v1/users/get-subscribed-channel-video/${channelId}`,
             {
                 withCredentials: true,
             }

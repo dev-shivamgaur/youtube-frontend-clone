@@ -1,13 +1,10 @@
 import axios from "axios";
 
-
-
-
-// const serverUrl = import.meta.env.VITE_BACKEND_SERVER_URL;
+const serverUrl = import.meta.env.VITE_BACKEND_SERVER_URL;
 
 const SignUp = async (username, email, fullName, password, avatar) => {
     try {
-        const response = await axios.post(`/api/v1/users/register`,
+        const response = await axios.post(`${serverUrl}/api/v1/users/register`,
             { username, email, fullName, password, avatar },
             {
                 headers: { "Content-Type": "multipart/form-data" }
@@ -25,7 +22,7 @@ const googleSignup = async (code) => {
         console.log("Code can not provide code is required..");
     }
     try {
-        const res = await axios.post(`/api/v1/users/google-register`, {
+        const res = await axios.post(`${serverUrl}/api/v1/users/google-register`, {
             code
         },
             {
@@ -42,7 +39,7 @@ const googleSignup = async (code) => {
 
 const googleLogin = async (code) => {
     try {
-        const res = await axios.post(`/api/v1/users/google-login`,
+        const res = await axios.post(`${serverUrl}/api/v1/users/google-login`,
             {
                 code
             },
@@ -61,7 +58,7 @@ const afterSignupRedirectlogin = async (email) => {
             console.log("Email cannot provide");
         }
 
-        const res = await axios.post(`/api/v1/users/after-googlesignup-rediretlogin`,
+        const res = await axios.post(`${serverUrl}/api/v1/users/after-googlesignup-rediretlogin`,
             {
                 email
             }
@@ -77,7 +74,7 @@ const afterSignupRedirectlogin = async (email) => {
 
 const Login = async (email, password) => {
     try {
-        const response = await axios.post(`/api/v1/users/login`,
+        const response = await axios.post(`${serverUrl}/api/v1/users/login`,
             { email, password },
             { withCredentials: true },
             {
@@ -94,7 +91,7 @@ const Login = async (email, password) => {
 const Logout = async () => {
     try {
         await axios.post(
-            `/api/v1/users/logout`,
+            `${serverUrl}/api/v1/users/logout`,
             {},
             {
                 withCredentials: true, // VERY IMPORTANT FOR COOKIE TOKEN
@@ -109,7 +106,7 @@ const Logout = async () => {
 const Userprofile = async () => {
     try {
         const response = await axios.get(
-            `/api/v1/users/profile-image`,
+            `${serverUrl}/api/v1/users/profile-image`,
             {
                 withCredentials: true,
             }
@@ -125,7 +122,7 @@ const userDashboard = async (username) => {
     try {
 
         const response = await axios.get(
-            `/api/v1/users/user-channel-profile/${username}`
+            `${serverUrl}/api/v1/users/user-channel-profile/${username}`
             ,
             { withCredentials: true }
         )
@@ -161,7 +158,7 @@ const verifyOtp = async (email, otp) => {
     }
 
     try {
-        const res = await axios.post(`/api/v1/users/verify-otp`,
+        const res = await axios.post(`${serverUrl}/api/v1/users/verify-otp`,
             {
                 email, otp
             }
@@ -180,7 +177,7 @@ const updatePassword = async (email, password) => {
     }
 
     try {
-        const res = await axios.patch("/api/v1/users/update-password",
+        const res = await axios.patch("${serverUrl}/api/v1/users/update-password",
             {
                 email, password
             },

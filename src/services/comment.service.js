@@ -1,12 +1,13 @@
 
 import axios from "axios";
+const serverUrl = import.meta.env.VITE_BACKEND_SERVER_URL;
 
 const addCommentVideo = async (content, videoId) => {
     try {
 
         if (!videoId) return;
 
-        const res = await axios.post(`/api/v1/users/add-comment/${videoId}`,
+        const res = await axios.post(`${serverUrl}/api/v1/users/add-comment/${videoId}`,
             { content },
             {
                 withCredentials: true,
@@ -23,7 +24,7 @@ const addCommentForSpecificComment = async (content, videoId, commentId) => {
     try {
         if (!videoId || !commentId) return;
 
-        const res = await axios.post(`/api/v1/users/add-comment/${videoId}`, {
+        const res = await axios.post(`${serverUrl}/api/v1/users/add-comment/${videoId}`, {
             content, commentId
         },
             {
@@ -40,7 +41,7 @@ const addCommentForSpecificComment = async (content, videoId, commentId) => {
 
 const deleteComment = async(commentId, videoId) => {
     try {
-        const res = await axios.delete(`/api/v1/users/delete-comment/${commentId}`,
+        const res = await axios.delete(`${serverUrl}/api/v1/users/delete-comment/${commentId}`,
             {
                 data: {videoId},
                 withCredentials: true
@@ -62,7 +63,7 @@ const updateComment = async(content, commentId, videoId) => {
             return;
         }
         
-        const res = await axios.patch(`/api/v1/users/update-comment/${commentId}`,
+        const res = await axios.patch(`${serverUrl}/api/v1/users/update-comment/${commentId}`,
             {content, videoId},
             {withCredentials: true},
         )
@@ -79,7 +80,7 @@ const updateComment = async(content, commentId, videoId) => {
 const getAllCommentsSpecificVideo = async (videoId) => {
     try {
         console.log(videoId);
-        const res = await axios.get(`/api/v1/users/get-video-comments/${videoId}`,
+        const res = await axios.get(`${serverUrl}/api/v1/users/get-video-comments/${videoId}`,
             {
                 withCredentials: true,
             }
