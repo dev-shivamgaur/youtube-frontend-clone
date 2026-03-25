@@ -8,7 +8,6 @@ export default defineConfig({
     proxy: {
       '/api/v1/users': {
         target: 'https://backend-esbd.onrender.com',
-        // target: 'http://localhost:3000',
         changeOrigin:true,
         secure:true
       }
