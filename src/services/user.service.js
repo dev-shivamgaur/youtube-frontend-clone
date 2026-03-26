@@ -43,6 +43,9 @@ const googleLogin = async (code) => {
             {
                 code
             },
+            {
+                withCredentials: true,
+            }
         )
 
         return res;
@@ -61,6 +64,9 @@ const afterSignupRedirectlogin = async (email) => {
         const res = await axios.post(`${serverUrl}/api/v1/users/after-googlesignup-rediretlogin`,
             {
                 email
+            },
+            {
+                withCredentials: true,
             }
         )
 
@@ -76,9 +82,9 @@ const Login = async (email, password) => {
     try {
         const response = await axios.post(`${serverUrl}/api/v1/users/login`,
             { email, password },
-            { withCredentials: true },
             {
-                headers: { "Content-Type": "application/json" }
+                headers: { "Content-Type": "application/json" },
+                withCredentials: true,
             }
         )
 
@@ -128,7 +134,7 @@ const userDashboard = async (username) => {
         )
         return response;
     } catch (error) {
-        return error;  
+        return error;
     }
 
 }
@@ -193,7 +199,7 @@ const updatePassword = async (email, password) => {
 }
 
 const generateNewAccessToken = async () => {
-   
+
     try {
         const res = await axios.post(`${serverUrl}/api/v1/users/refresh-access-token`,
             {},
