@@ -481,7 +481,7 @@ const Comment = ({ setOpen, open, user, videoInfo, commentInfo, replyedCommentIn
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full ">
       <div className="flex justify-between">
         <h2 className="text-sm sm:text-base font-semibold mb-3">Comments</h2>
         {open ? (
@@ -531,7 +531,7 @@ const Comment = ({ setOpen, open, user, videoInfo, commentInfo, replyedCommentIn
           const replyCount = getTotalRepliesCount(comment?._id, replyedCommentInfo);
 
           return (
-            <div key={comment._id} className="mb-3">
+            <div key={comment._id} className="mb-6">
               <div className="flex gap-3">
                 <div className="w-9 h-9 rounded-full bg-gray-600">
                   {comment?.owner?.avatar && (

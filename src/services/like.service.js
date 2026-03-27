@@ -4,11 +4,17 @@ const serverUrl = import.meta.env.VITE_BACKEND_SERVER_URL;
 
 const toggleUserReaction = async (videoId, userReaction) => {
 
+    if (!videoId) {
+        console.log("Videoid is required")
+    }
     try {
         const res = await axios.post(
             `${serverUrl}/api/v1/users/v/toggle-like/${videoId}`,
             {
                 userReaction,
+                
+            },
+            {
                 withCredentials: true,
             }
         );
@@ -25,10 +31,12 @@ const toggleUserReactionForComment = async (commentId,videoId, userReaction) => 
 
     try {
         const res = await axios.post(`${serverUrl}/api/v1/users/c/toggle-like/${commentId}`, {
-            userReaction,videoId,
-            withCredentials: true,
-
+            userReaction,
+            videoId,
         }, 
+        {
+            withCredentials: true,
+        }
         )
 
         console.log(res);
@@ -41,7 +49,9 @@ const toggleUserReactionForComment = async (commentId,videoId, userReaction) => 
 }
 
 const userVideoReactionStatus = async (videoId) => {
-
+    if (!videoId) {
+        console.log("Videoid is required")
+    }
     try {
         const res = await axios.get(`${serverUrl}/api/v1/users/v/get-status/${videoId}`,
             {

@@ -59,9 +59,10 @@ export default function Signup() {
 
 
     return (
-        <div className="w-full flex flex-col items-center mt-8 ">
-            <div className="mx-auto w-full max-w-lg  rounded-xl p-10 border border-black/10 shadow-lg">
-                <div className="mb-4 flex justify-center">
+        <div className="h-screen overflow-hidden">
+        <div className="w-full flex flex-col items-center  h-full overflow-y-auto  ">
+            <div className="mx-auto w-full max-w-lg  rounded-xl  m-10 p-10 border border-black/10 shadow-lg">
+                <div className="mb-4 flex justify-center ">
                     <span className="inline-block w-full max-w-[100px]">
                         <Logo />
                     </span>
@@ -176,6 +177,7 @@ export default function Signup() {
    className="mt-4  border border-blue-100 rounded-lg shadow-md  max-w-lg w-full t bg-transparent  p-2 "
    onClick={googleLogin}>Continue With Google</button>
 
+        </div>
         </div>
     );
 }

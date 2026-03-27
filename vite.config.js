@@ -1,16 +1,19 @@
-import { defineConfig } from 'vite'
+import { defineConfig ,loadEnv} from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(
+  ({mode})=>{
+    const env = loadEnv(mode, process.cwd())
+  return {
   plugins: [react()],
   server: {
     proxy: {
       '/api/v1/users': {
-        target: 'https://backend-esbd.onrender.com',
+        target: env.VITE_BACKEND_SERVER_URL,
         changeOrigin:true,
         secure:true
       }
     },
   },
+}
 })

@@ -428,8 +428,8 @@ function MainLongVideoCard() {
       setLike(true);
     }
 
-    try {
-      const res = await toggleUserReaction(videoId, reaction)
+    
+      let res = await toggleUserReaction(videoId, reaction)
        if (res?.response?.data?.data === "Unauthorized request, Token created") {
           const res2= await generateNewAccessToken();
           if (res2?.response?.data?.data === "Refresh Token can not provide please login") {
@@ -439,14 +439,22 @@ function MainLongVideoCard() {
             return;
           }
            if (res2?.data?.message === "Access Token is created SuccessFully") {
-             await toggleUserReaction(videoId, reaction);
-            
-            return;
+             const res3 = await toggleUserReaction(videoId, reaction);
+             if (res3?.response?.data?.data === "Unauthorized request, Token created") {
+              setLikesCount(prev => Math.max(prev - 1, 0));
+              setLike(false);
+             }
+             res = res3
+             
+             return;
+            // if (res?.response) {
+              
+            // }
+            // console.log("likeresponse",res);
+            // return;
            }
         }
-    } catch (error) {
-      console.log(error)
-    }
+    
 
   };
 
@@ -481,8 +489,12 @@ function MainLongVideoCard() {
             return;
           }
            if (res2?.data?.message === "Access Token is created SuccessFully") {
-             await toggleUserReaction(videoId, reaction);
-            
+             const res3 = await toggleUserReaction(videoId, reaction);
+             if (res3?.response?.data?.data === "Unauthorized request, Token created") {
+              
+      setLikesCount(prev => Math.max(prev - 1, 0));
+      setDisLike(false);
+             }
             return;
            }
         }
@@ -546,7 +558,8 @@ function MainLongVideoCard() {
   }
 
   return (
-    <div>
+    <div className="h-screen overflow-hidden mb-2">
+    <div className="h-full overflow-y-auto">
       {
         showPopup ? (<RedirectPopup
           open={showPopup}
@@ -710,7 +723,7 @@ function MainLongVideoCard() {
             </div>
 
             {/* ================= COMMENTS ================= */}
-            <div className="mt-6">
+            <div className="my-6">
               <Comment
                 setOpen={setOpen}
                 open={open}
@@ -720,6 +733,7 @@ function MainLongVideoCard() {
                 setCommentInfo={setCommentInfo}
                 replyedCommentInfo={replyedCommentInfo}
                 setReplyedCommentInfo={setReplyedCommentInfo}
+                
               />
             </div>
 
@@ -727,6 +741,7 @@ function MainLongVideoCard() {
         </div>)
 
       }
+    </div>
     </div>
   );
 }

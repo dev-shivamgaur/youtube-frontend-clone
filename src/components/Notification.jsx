@@ -19,6 +19,7 @@ const Notification = () => {
     const [notificationIconLoading, setNotificationIconLoading] = useState(false);
     const menuRef  = useRef();
     const authData = useSelector((state) => state.auth.userData);
+    
    useEffect(() => {
         const handler = (e) => {
             if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -35,6 +36,7 @@ const Notification = () => {
       const fetchNotificationCount = async() => {
         // getNotification(authData?._id);
         setNotificationIconLoading(true);
+        console.log("authData",authData);
         const res = await getNotificationCount(authData?._id);
         console.log(res?.data);
         if (res?.data?.statusCode ===200) {
@@ -45,7 +47,7 @@ const Notification = () => {
 
       }
       fetchNotificationCount();
-    },[]);
+    },[authData?._id]);
 
     useEffect(() => {
      const fetchNotification = async() => {
