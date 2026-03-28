@@ -22,6 +22,7 @@ import UploadedVideoAndAllVideo from './components/SpecificUserAllVideo/uploaded
 import { ProtectedRoute ,ForgotPassword, UpdatePassword, UpdatePasswordPageProtectedRoute, SubscriptionsVideos, SubscriptionChannels} from './components/index.js'
 const router = createBrowserRouter([
   {
+
     path: "/",
     element: <App />,
     children: [
@@ -99,9 +100,14 @@ const router = createBrowserRouter([
             element: <SubscriptionChannels/>
           }
         ]
-      }
+      },
       //  PROTECTED ROUTES END
+      {
+        path: "*",
+        element: <h1>404 - Page Not Found</h1>
+      }
     ]
+    
   }
 ]);
 
